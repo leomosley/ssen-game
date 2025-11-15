@@ -1,7 +1,7 @@
-import Controls from "./components/Controls";
-import Events from "./components/Events";
-import Monitors from "./components/Monitors";
-
+import Notifications from "@/components/game/Notifications";
+import Controls from "../components/game/Controls";
+import Events from "../components/game/Events";
+import Monitors from "../components/game/Monitors";
 
 export default function Home() {
   return (
@@ -10,6 +10,7 @@ export default function Home() {
         <div className="flex gap-4">
           <Events />
           <Monitors />
+          <Notifications />
         </div>
         <Controls />
       </main>
