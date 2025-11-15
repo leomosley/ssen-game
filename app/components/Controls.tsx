@@ -81,26 +81,6 @@ import {
 export default function Controls() {
   const { gameState, setToolValue } = useGameContext();
 
-  const Slider = (tool: SliderTool) => {
-    const Icon = tool.icon;
-    const value = gameState.toolStates[tool.id] ?? tool.defaultValue;
-
-    return (
-      <div key={tool.id} className="flex flex-col items-center gap-2">
-        <Icon className="w-6 h-6 text-indigo-600" />
-        <input
-          type="range"
-          min={tool.min}
-          max={tool.max}
-          step={tool.step}
-          value={value}
-          onChange={(e) => setToolValue(tool.id, parseFloat(e.target.value))}
-          className="w-2 h-48 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 [writing-mode:vertical-lr] [direction:rtl]"
-        />
-      </div>
-    );
-  };
-
   return (
     <Card className="w-[96dvw] h-[50dvh]">
       <CardHeader>
@@ -109,9 +89,27 @@ export default function Controls() {
       <CardContent>
         <div className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-lg p-6">
           <div className="flex items-end justify-around gap-8">
-            {SLIDER_TOOLS.map((tool, index) => (
-              <Slider key={index} {...tool} />
-            ))}
+            {SLIDER_TOOLS.map((tool) => {
+              const Icon = tool.icon;
+              const value = gameState.toolStates[tool.id] ?? tool.defaultValue;
+
+              return (
+                <div key={tool.id} className="flex flex-col items-center gap-2">
+                  <Icon className="w-6 h-6 text-indigo-600" />
+                  <input
+                    type="range"
+                    min={tool.min}
+                    max={tool.max}
+                    step={tool.step}
+                    value={value}
+                    onChange={(e) =>
+                      setToolValue(tool.id, parseFloat(e.target.value))
+                    }
+                    className="w-2 h-48 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 [writing-mode:vertical-lr] [direction:rtl]"
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </CardContent>
