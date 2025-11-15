@@ -40,7 +40,7 @@ export default function Events() {
   const { gameState } = useGameContext();
 
   return (
-    <Card className="w-full h-fit">
+    <Card className="w-full h-full">
       <CardHeader>
         <CardTitle>Events</CardTitle>
       </CardHeader>
