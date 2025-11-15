@@ -63,9 +63,9 @@ export const SLIDER_TOOLS: SliderTool[] = [
     info: 'Delaying EV charging helps the energy network by reducing peak demand and relieving stress on local and regional feeders. When charging is paused or shifted to off-peak periods, it prevents overloading of transformers and lines, maintains voltage stability, and reduces the risk of outages. This allows the grid to better integrate variable renewable generation, such as solar and wind, by aligning electricity demand with periods of higher supply. Aggregated EVs can act as flexible loads, responding to grid signals to charge at optimal times, which decreases the need for expensive peaker plants and improves overall efficiency. While essential services remain unaffected, strategically delaying non-essential EV charging enhances grid resilience, lowers operational costs, and supports a more stable, low-carbon electricity system.',
     impact: 'demand',
     type: 'slider',
-    min: -0.15, // -15% demand (delay charging)
-    max: 0.15, // +15% demand (accelerate charging)
-    step: 0.01,
+    min: -1, // -15% demand (delay charging)
+    max: 1, // +15% demand (accelerate charging)
+    step: 0.1,
     defaultValue: 0,
     icon: Car,
   },
@@ -76,9 +76,9 @@ export const SLIDER_TOOLS: SliderTool[] = [
     info: 'Residential load reduction helps the energy network by temporarily lowering electricity demand from households, easing stress on local feeders, transformers, and substations during peak periods. By reducing or pausing non-essential appliances such as heating, cooling, or EV charging, the grid can maintain voltage stability, prevent overloads, and reduce the risk of outages. Coordinated residential load reduction also supports the integration of variable renewable generation by shifting consumption to align with periods of high renewable output. This flexibility decreases reliance on expensive peaker plants, improves overall grid efficiency, and enhances system resilience. When effectively managed, residential load reduction provides a controllable, distributed resource that helps balance supply and demand while minimizing disruption to essential household services.',
     impact: 'demand',
     type: 'slider',
-    min: -0.15, // -15% demand
-    max: 0.15, // +15% demand
-    step: 0.01,
+    min: -1, // -15% demand
+    max: 1, // +15% demand
+    step: 0.1,
     defaultValue: 0,
     icon: Home,
   },
@@ -89,9 +89,9 @@ export const SLIDER_TOOLS: SliderTool[] = [
     info: 'Shifting industrial loads allows the energy network to better balance supply and demand by moving large electricity consumption from peak periods to times of lower demand. By temporarily reducing or delaying energy-intensive processes, factories and industrial sites can relieve stress on local and regional feeders, prevent overloading of transformers, and maintain voltage stability. This flexibility helps the grid integrate variable renewable generation by aligning industrial consumption with periods of high renewable output, such as daytime solar peaks. Coordinated load shifting can reduce the need for expensive peaker plants, lower operational costs, and improve overall grid efficiency. When managed effectively, industrial load shifting enhances grid resilience, supports a low-carbon energy system, and provides a controllable resource that operators can use to maintain stability without affecting essential production processes.',
     impact: 'demand',
     type: 'slider',
-    min: -0.20, // -20% demand
-    max: 0.20, // +20% demand
-    step: 0.01,
+    min: -1, // -20% demand
+    max: 1, // +20% demand
+    step: 0.1,
     defaultValue: 0,
     icon: Building2,
   },
@@ -102,9 +102,9 @@ export const SLIDER_TOOLS: SliderTool[] = [
     info: 'Batteries help manage the electricity grid by acting as flexible energy storage that can absorb excess electricity when supply exceeds demand and release it when demand exceeds supply. They are used for peak shaving, discharging during periods of high demand to reduce stress on the grid; load shifting, storing energy during low-demand periods and releasing it during high-demand periods; and frequency regulation, quickly injecting or absorbing power to maintain grid stability around 50 Hz. Batteries also provide local backup during outages and reduce renewable energy curtailment by capturing otherwise wasted solar or wind power. They can be connected at utility, distribution, or residential levels, with utility-scale batteries helping balance regional grids, distribution-level batteries managing local voltage and feeder capacity, and aggregated residential or commercial batteries acting like virtual power plants. Key metrics include capacity (kWh) for total stored energy, power (kW) for charging/discharging speed, response time for how quickly the battery reacts to signals, and state of charge (SoC) indicating current energy stored. Grid operators, such as DNOs or National Grid, send signals to batteries to optimize charge and discharge, which reduces the need for traditional peaker plants, lowers carbon emissions, and improves overall grid flexibility and resilience.',
     impact: 'supply',
     type: 'slider',
-    min: -0.15, // -15% supply (sending to storage)
-    max: 0.15, // +15% supply (drawing from storage)
-    step: 0.01,
+    min: -1.0, // -15% supply (sending to storage)
+    max: 1.0, // +15% supply (drawing from storage)
+    step: 0.1,
     defaultValue: 0,
     icon: Battery,
   },
