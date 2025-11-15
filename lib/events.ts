@@ -23,7 +23,7 @@ export interface GameEvent {
   description: string;
   impact: EventImpact;
   multiplier: number; // 0.9 = -10%, 1.1 = +10%, etc.
-  duration: number; // in game years
+  duration: number; // in ticks
   probability: number; // 0-1, chance of occurring per check
   conflicts?: string[]; // IDs of events that can't be active at the same time
   icon: React.ElementType;
@@ -42,7 +42,7 @@ export const DEMAND_EVENTS: GameEvent[] = [
     description: 'Major industrial facilities starting operations',
     impact: 'demand',
     multiplier: 1.3,
-    duration: 0.5, // 6 months
+    duration: 5, // 2 ticks
     probability: 0.15,
     icon: Factory,
   },
@@ -52,7 +52,7 @@ export const DEMAND_EVENTS: GameEvent[] = [
     description: 'Large sporting event causing spike in viewership',
     impact: 'demand',
     multiplier: 1.2,
-    duration: 0.1, // ~1 month
+    duration: 3, // 0.4 ticks
     probability: 0.08,
     icon: Trophy,
   },
@@ -62,7 +62,7 @@ export const DEMAND_EVENTS: GameEvent[] = [
     description: 'Unseasonably cold weather increasing heating demand',
     impact: 'demand',
     multiplier: 1.4,
-    duration: 0.25, // 3 months
+    duration: 7, // 1 tick
     probability: 0.12,
     conflicts: ['heatwave-demand', 'mild-weather'],
     icon: Snowflake,
@@ -73,7 +73,7 @@ export const DEMAND_EVENTS: GameEvent[] = [
     description: 'Extreme heat causing air conditioning surge',
     impact: 'demand',
     multiplier: 1.35,
-    duration: 0.2, // ~2.5 months
+    duration: 6, // 0.8 ticks
     probability: 0.1,
     conflicts: ['cold-weather', 'mild-weather'],
     icon: Flame,
@@ -84,7 +84,7 @@ export const DEMAND_EVENTS: GameEvent[] = [
     description: 'Increased residential energy consumption during holidays',
     impact: 'demand',
     multiplier: 1.15,
-    duration: 0.15, // ~2 months
+    duration: 4, // 0.6 ticks
     probability: 0.2,
     icon: Gift,
   },
@@ -94,20 +94,10 @@ export const DEMAND_EVENTS: GameEvent[] = [
     description: 'Pleasant temperatures reducing heating/cooling needs',
     impact: 'demand',
     multiplier: 0.85,
-    duration: 0.3, // ~4 months
+    duration: 11, // 1.2 ticks
     probability: 0.15,
     conflicts: ['cold-weather', 'heatwave-demand'],
     icon: CloudSun,
-  },
-  {
-    id: 'economic-slowdown',
-    name: 'Economic Slowdown',
-    description: 'Reduced industrial activity lowering demand',
-    impact: 'demand',
-    multiplier: 0.8,
-    duration: 1.5, // 1.5 years
-    probability: 0.05,
-    icon: TrendingDown,
   },
 ];
 
@@ -119,7 +109,7 @@ export const SUPPLY_EVENTS: GameEvent[] = [
     description: 'Strong consistent winds boosting wind power generation',
     impact: 'supply',
     multiplier: 1.3,
-    duration: 0.2, // ~2.5 months
+    duration: 4, // 0.2 ticks
     probability: 0.12,
     conflicts: ['wind-drop'],
     icon: Wind,
@@ -130,7 +120,7 @@ export const SUPPLY_EVENTS: GameEvent[] = [
     description: 'Extended cloudy period reducing solar output',
     impact: 'supply',
     multiplier: 0.7,
-    duration: 0.15, // ~2 months
+    duration: 7, // 0.15 ticks
     probability: 0.15,
     conflicts: ['optimal-conditions'],
     icon: CloudOff,
@@ -141,7 +131,7 @@ export const SUPPLY_EVENTS: GameEvent[] = [
     description: 'Calm weather reducing wind power generation',
     impact: 'supply',
     multiplier: 0.75,
-    duration: 0.25, // 3 months
+    duration: 5, // 0.25 ticks
     probability: 0.15,
     conflicts: ['wind-surge'],
     icon: Wind,
@@ -152,7 +142,7 @@ export const SUPPLY_EVENTS: GameEvent[] = [
     description: 'Low water levels affecting hydroelectric generation',
     impact: 'supply',
     multiplier: 0.8,
-    duration: 0.5, // 6 months
+    duration: 4, // 0.5 ticks
     probability: 0.08,
     conflicts: ['extreme-downpour', 'optimal-conditions'],
     icon: CloudDrizzle,
@@ -163,7 +153,7 @@ export const SUPPLY_EVENTS: GameEvent[] = [
     description: 'Heavy rainfall boosting hydroelectric output',
     impact: 'supply',
     multiplier: 1.25,
-    duration: 0.1, // ~1 month
+    duration: 3, // 0.1 ticks
     probability: 0.1,
     conflicts: ['drought'],
     icon: CloudRain,
@@ -174,7 +164,7 @@ export const SUPPLY_EVENTS: GameEvent[] = [
     description: 'Extreme heat causing equipment efficiency losses',
     impact: 'supply',
     multiplier: 0.85,
-    duration: 0.2, // ~2.5 months
+    duration: 5, // 0.2 ticks
     probability: 0.1,
     conflicts: ['extreme-cold'],
     icon: ThermometerSun,
@@ -185,7 +175,7 @@ export const SUPPLY_EVENTS: GameEvent[] = [
     description: 'Freezing conditions damaging infrastructure',
     impact: 'supply',
     multiplier: 0.65,
-    duration: 0.15, // ~2 months
+    duration: 8, // 0.15 ticks
     probability: 0.07,
     conflicts: ['heatwave-supply', 'optimal-conditions'],
     icon: Snowflake,
@@ -196,7 +186,7 @@ export const SUPPLY_EVENTS: GameEvent[] = [
     description: 'Perfect weather conditions for renewable energy',
     impact: 'supply',
     multiplier: 1.2,
-    duration: 0.25, // 3 months
+    duration: 5, // 0.25 ticks
     probability: 0.1,
     conflicts: ['solar-dip', 'extreme-cold', 'drought'],
     icon: Sparkles,

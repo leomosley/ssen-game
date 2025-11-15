@@ -1,6 +1,7 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useGameContext } from '@/lib/context/game-context';
 import { type GameEvent, getRandomEvent } from '@/lib/events';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -26,6 +27,7 @@ const EventCard = (props: GameEvent) => {
 
 export default function Events() {
   const [activeEvents, setActiveEvents] = useState<GameEvent[]>([]);
+  const { gameState } = useGameContext()
 
   const renderRandomEvent = () => {
     if (activeEvents.length < 3) {
@@ -36,13 +38,12 @@ export default function Events() {
   };
 
   return (
-    <Card className="w-[50dvw] h-[40dvh]">
-      {/* <CardHeader className='flex'>
+    <Card className="w-[50dvw] h-[40dvh] flex-col gap-2">
+      <CardHeader className='flex'>
         <CardTitle>Events</CardTitle>
-      </CardHeader> */}
+      </CardHeader>
       <CardContent className='flex-col gap-1 flex'>
-        <Button onClick={renderRandomEvent}>Add Event</Button>
-        {activeEvents.map((event, index) => (
+        {gameState.activeEvents.map((event, index) => (
           <EventCard key={index} {...event} />
         ))}
       </CardContent>

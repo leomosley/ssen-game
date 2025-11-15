@@ -37,7 +37,7 @@ export default function Monitors() {
             <div
               className="absolute top-0 bottom-0 w-1 bg-slate-900 transition-all duration-300"
               style={{
-                left: `${Math.min(gameState.capacityFactor * 100, 120)}%`,
+                left: `${Math.min(gameState.capacityFactor * 100, 100)}%`,
               }}
             >
               <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-900 whitespace-nowrap">
