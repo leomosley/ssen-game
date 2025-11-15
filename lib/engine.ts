@@ -1,11 +1,18 @@
+import { ActiveEvent, ALL_EVENTS, createActiveEvent } from './events';
+
 export interface GameEngineConfig {
   initialPopulation?: number;
-  initialTime?: number;
+  initialTime?: number; // game time in years
   baseTickInterval?: number; // milliseconds
   timeGrowthRate?: number; // exponential growth rate for time acceleration
   populationGrowthRate?: number; // exponential growth rate for population
+  populationVolatility?: number; // random variance factor (0-1)
   maxTickInterval?: number; // cap on how slow ticks can get
   minTickInterval?: number; // cap on how fast ticks can get
+  targetGameYears?: number; // total game years to simulate
+  targetRealMinutes?: number; // real time minutes for full simulation
+  baseSupply?: number; // base energy supply
+  eventCheckInterval?: number; // how many ticks between event checks
 }
 
 export interface GameState {
@@ -15,10 +22,15 @@ export interface GameState {
   timeMultiplier: number;
   populationMultiplier: number;
   isRunning: boolean;
+  activeEvents: ActiveEvent[];
+  totalDemand: number;
+  totalSupply: number;
+  networkPressure: number; // demand / supply ratio
 }
 
 export type GameEventCallback = (state: GameState) => void;
 
+export const BASE_DEMAND_PER_PERSON = 0.148; // kW per person
 export class GameEngine {
   private state: GameState;
   private config: Required<GameEngineConfig>;
@@ -31,17 +43,36 @@ export class GameEngine {
   private onStateUpdate: GameEventCallback[] = [];
 
   constructor(config: GameEngineConfig = {}) {
+    // Default: grow from small village (2000) to large city (500000) over 100 game years in 7.5 real minutes
+    const targetGameYears = config.targetGameYears ?? 100;
+    const targetRealMinutes = config.targetRealMinutes ?? 7.5;
+
+    // Calculate growth rate needed to go from initialPop to ~500k in targetGameYears
+    // Using exponential growth: finalPop = initialPop * e^(rate * years)
+    // rate = ln(finalPop / initialPop) / years
+    const initialPop = config.initialPopulation ?? 2000;
+    const targetPop = 500000;
+    const calculatedGrowthRate = Math.log(targetPop / initialPop) / targetGameYears;
+
     this.config = {
-      initialPopulation: config.initialPopulation ?? 1000,
+      initialPopulation: initialPop,
       initialTime: config.initialTime ?? 0,
-      baseTickInterval: config.baseTickInterval ?? 1000,
-      timeGrowthRate: config.timeGrowthRate ?? 0.001,
-      populationGrowthRate: config.populationGrowthRate ?? 0.002,
-      maxTickInterval: config.maxTickInterval ?? 5000,
+      baseTickInterval: config.baseTickInterval ?? 500, // tick twice per second
+      timeGrowthRate: config.timeGrowthRate ?? 0.01, // time acceleration
+      populationGrowthRate: config.populationGrowthRate ?? calculatedGrowthRate,
+      populationVolatility: config.populationVolatility ?? 0.03, // 3% variance
+      maxTickInterval: config.maxTickInterval ?? 2000,
       minTickInterval: config.minTickInterval ?? 100,
+      targetGameYears,
+      targetRealMinutes,
+      baseSupply: config.baseSupply ?? 20000, // kW base supply
+      eventCheckInterval: config.eventCheckInterval ?? 20, // check for events every 20 ticks
     };
 
     this.currentTickInterval = this.config.baseTickInterval;
+
+    const initialDemand = this.config.initialPopulation * BASE_DEMAND_PER_PERSON;
+    const initialSupply = this.config.baseSupply;
 
     this.state = {
       currentTime: this.config.initialTime,
@@ -50,6 +81,10 @@ export class GameEngine {
       timeMultiplier: 1,
       populationMultiplier: 1,
       isRunning: false,
+      activeEvents: [],
+      totalDemand: initialDemand,
+      totalSupply: initialSupply,
+      networkPressure: initialDemand / initialSupply,
     };
   }
 
@@ -82,6 +117,9 @@ export class GameEngine {
    */
   reset(): void {
     this.stop();
+    const initialDemand = this.config.initialPopulation * BASE_DEMAND_PER_PERSON;
+    const initialSupply = this.config.baseSupply;
+
     this.state = {
       currentTime: this.config.initialTime,
       currentPopulation: this.config.initialPopulation,
@@ -89,6 +127,10 @@ export class GameEngine {
       timeMultiplier: 1,
       populationMultiplier: 1,
       isRunning: false,
+      activeEvents: [],
+      totalDemand: initialDemand,
+      totalSupply: initialSupply,
+      networkPressure: initialDemand / initialSupply,
     };
     this.currentTickInterval = this.config.baseTickInterval;
   }
@@ -111,32 +153,127 @@ export class GameEngine {
   private tick(): void {
     this.state.tickCount++;
 
-    // Calculate exponential multipliers based on tick count
-    this.state.timeMultiplier = Math.exp(this.config.timeGrowthRate * this.state.tickCount);
-    this.state.populationMultiplier = Math.exp(this.config.populationGrowthRate * this.state.tickCount);
+    // Calculate how many game years should pass in target real minutes
+    // Each tick represents a fraction of the total game time
+    const totalTicks = (this.config.targetRealMinutes * 60 * 1000) / this.config.baseTickInterval;
+    const yearsPerTick = this.config.targetGameYears / totalTicks;
 
-    // Update time (each tick represents time passing, accelerating exponentially)
-    const timeIncrement = 1 * this.state.timeMultiplier;
-    this.state.currentTime += timeIncrement;
+    // Time accelerates exponentially to simulate time feeling faster
+    this.state.timeMultiplier = Math.exp(this.config.timeGrowthRate * this.state.tickCount);
+    const acceleratedYearsPerTick = yearsPerTick * this.state.timeMultiplier;
+
+    // Update time in years
+    this.state.currentTime += acceleratedYearsPerTick;
     this.notifyListeners(this.onTimeTick);
 
-    // Update population (grows exponentially)
-    const populationIncrement = this.config.initialPopulation *
-      (this.state.populationMultiplier - 1) / 100; // Smaller increments
-    this.state.currentPopulation += populationIncrement;
+    // Calculate population using exponential growth formula: P(t) = P0 * e^(rate * t)
+    // where t is the current time in years
+    const basePopulation = this.config.initialPopulation * Math.exp(
+      this.config.populationGrowthRate * this.state.currentTime
+    );
+
+    // Add volatility - small random fluctuations around the base population
+    const volatilityFactor = 1 + (Math.random() - 0.5) * 2 * this.config.populationVolatility;
+    this.state.currentPopulation = basePopulation * volatilityFactor;
+
+    // Update population multiplier for display purposes
+    this.state.populationMultiplier = this.state.currentPopulation / this.config.initialPopulation;
+
     this.notifyListeners(this.onPopulationTick);
 
-    // Update tick interval (gets slower over time exponentially)
+    // Event management - check for new events and remove expired ones
+    this.updateEvents();
+
+    // Calculate network demand and supply with event multipliers
+    this.calculateNetworkMetrics();
+
+    // Update tick interval (gets slower over time exponentially, but capped)
+    // This makes the game feel faster as time goes on
     this.currentTickInterval = Math.min(
       this.config.maxTickInterval,
       Math.max(
         this.config.minTickInterval,
-        this.config.baseTickInterval * this.state.timeMultiplier
+        this.config.baseTickInterval * (1 + Math.log(1 + this.state.timeMultiplier))
       )
     );
 
     // Notify general state update listeners
     this.notifyListeners(this.onStateUpdate);
+  }
+
+  /**
+   * Update active events - add new ones and remove expired ones
+   * Max 4 events active at any time, new event every 10 ticks when possible
+   */
+  private updateEvents(): void {
+    const MAX_ACTIVE_EVENTS = 4;
+    const EVENT_CHECK_INTERVAL = 10;
+
+    // Remove expired events
+    this.state.activeEvents = this.state.activeEvents.filter(
+      event => event.endTime > this.state.currentTime
+    );
+
+    // Check for new events every 10 ticks
+    if (this.state.tickCount % EVENT_CHECK_INTERVAL === 0) {
+      // Only add new event if we have fewer than 4 active events
+      if (this.state.activeEvents.length < MAX_ACTIVE_EVENTS) {
+        // Try to find a suitable event to trigger
+        let attempts = 0;
+        const maxAttempts = 10; // Prevent infinite loop
+
+        while (attempts < maxAttempts) {
+          const randomEvent = ALL_EVENTS[Math.floor(Math.random() * ALL_EVENTS.length)];
+
+          // Check if event isn't already active
+          const isAlreadyActive = this.state.activeEvents.some(e => e.id === randomEvent.id);
+
+          // Check if event conflicts with any active events
+          const hasConflict = randomEvent.conflicts?.some(conflictId =>
+            this.state.activeEvents.some(activeEvent => activeEvent.id === conflictId)
+          ) ?? false;
+
+          if (!isAlreadyActive && !hasConflict) {
+            // Create and add the active event
+            const activeEvent = createActiveEvent(randomEvent, this.state.currentTime);
+            this.state.activeEvents.push(activeEvent);
+            break; // Event successfully added, exit loop
+          }
+
+          attempts++;
+        }
+      }
+    }
+  }
+
+  /**
+   * Calculate network demand, supply, and pressure
+   * Formula: (Population * Demand) + events = pressure on network
+   */
+  private calculateNetworkMetrics(): void {
+    // Base demand from population
+    const baseDemand = this.state.currentPopulation * BASE_DEMAND_PER_PERSON;
+
+    // Apply demand event multipliers
+    const demandMultiplier = this.state.activeEvents
+      .filter(e => e.impact === 'demand')
+      .reduce((acc, event) => acc * event.multiplier, 1);
+
+    this.state.totalDemand = baseDemand * demandMultiplier;
+
+    // Base supply (grows slowly with population to keep pace somewhat)
+    const baseSupply = this.config.baseSupply + (this.state.currentPopulation - this.config.initialPopulation) * 2;
+
+    // Apply supply event multipliers
+    const supplyMultiplier = this.state.activeEvents
+      .filter(e => e.impact === 'supply')
+      .reduce((acc, event) => acc * event.multiplier, 1);
+
+    this.state.totalSupply = baseSupply * supplyMultiplier;
+
+    // Calculate network pressure (demand/supply ratio)
+    // Ideal pressure is around 0.8-0.9 (80-90% utilization)
+    this.state.networkPressure = this.state.totalDemand / this.state.totalSupply;
   }
 
   /**
