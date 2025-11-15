@@ -90,7 +90,7 @@ export class GameEngine {
       targetGameYears,
       targetRealMinutes,
       baseSupply: config.baseSupply ?? 20000, // kW base supply
-      eventCheckInterval: config.eventCheckInterval ?? 20, // check for events every 20 ticks
+      eventCheckInterval: config.eventCheckInterval ?? 5,
     };
 
     this.currentTickInterval = this.config.baseTickInterval;
@@ -240,20 +240,20 @@ export class GameEngine {
 
   /**
    * Update active events - add new ones and remove expired ones
-   * Max 4 events active at any time, new event every 10 ticks when possible
+   * Max 4 events active at any time, new event every EVENT_CHECK_INTERVAL ticks when possible
    */
   private updateEvents(): void {
     const MAX_ACTIVE_EVENTS = 4;
-    const EVENT_CHECK_INTERVAL = 10;
+    const EVENT_CHECK_INTERVAL = this.config.eventCheckInterval;
 
-    // Remove expired events
+    // Remove expired events (based on tick count)
     this.state.activeEvents = this.state.activeEvents.filter(
-      event => event.endTime > this.state.currentTime
+      event => event.endTick > this.state.tickCount
     );
 
-    // Check for new events every 10 ticks
+    // Check for new events every EVENT_CHECK_INTERVAL ticks
     if (this.state.tickCount % EVENT_CHECK_INTERVAL === 0) {
-      // Only add new event if we have fewer than 4 active events
+      // Only add new event if we have fewer than MAX_ACTIVE_EVENTS active events
       if (this.state.activeEvents.length < MAX_ACTIVE_EVENTS) {
         // Try to find a suitable event to trigger
         let attempts = 0;
@@ -271,8 +271,8 @@ export class GameEngine {
           ) ?? false;
 
           if (!isAlreadyActive && !hasConflict) {
-            // Create and add the active event
-            const activeEvent = createActiveEvent(randomEvent, this.state.currentTime);
+            // Create and add the active event (using tick count)
+            const activeEvent = createActiveEvent(randomEvent, this.state.tickCount);
             this.state.activeEvents.push(activeEvent);
             break; // Event successfully added, exit loop
           }

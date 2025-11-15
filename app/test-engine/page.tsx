@@ -369,8 +369,7 @@ function TestEngineContent() {
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-slate-500">
-                      Ends in{" "}
-                      {(event.endTime - gameState.currentTime).toFixed(1)} years
+                      Ends in {event.endTick - gameState.tickCount} ticks
                     </div>
                   </div>
                 );
