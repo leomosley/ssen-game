@@ -1,17 +1,11 @@
 "use client";
 
-import { useGame } from "@/lib/hooks/use-game";
+import { GameProvider, useGameContext } from "@/lib/context/game-context";
 import { ALL_TOOLS } from "@/lib/tools";
 
-export default function TestEngine() {
+function TestEngineContent() {
   const { gameState, tickInterval, toggle, reset, applyTool, isToolAvailable } =
-    useGame({
-      initialPopulation: 2000, // small village
-      targetGameYears: 500,
-      targetRealMinutes: 120,
-      populationVolatility: 0.01, // 1% random variance
-      autoStart: true,
-    });
+    useGameContext();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans">
@@ -481,5 +475,21 @@ export default function TestEngine() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function TestEngine() {
+  return (
+    <GameProvider
+      options={{
+        initialPopulation: 2000, // small village
+        targetGameYears: 500,
+        targetRealMinutes: 120,
+        populationVolatility: 0.01, // 1% random variance
+        autoStart: true,
+      }}
+    >
+      <TestEngineContent />
+    </GameProvider>
   );
 }
