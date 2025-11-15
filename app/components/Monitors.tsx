@@ -1,15 +1,13 @@
+'use client'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { GameState } from '@/lib/engine';
+import { useGameContext } from '@/lib/context/game-context';
 
 export default function Monitors() {
-    gameState
+  const { gameState } = useGameContext();
   return (
     <Card className="w-[45dvw] h-[40dvh]">
-      <CardHeader>
-        <CardTitle>Monitors</CardTitle>
-      </CardHeader>
       <CardContent>
-        <div className="w-full bg-white border-2 border-slate-300 rounded-lg p-6">
           <h3 className="font-semibold text-slate-900 mb-4">
             Grid Capacity Factor
           </h3>
@@ -61,10 +59,10 @@ export default function Monitors() {
             <div
               className={`p-3 rounded border-2 ${
                 gameState.warningCount >= 3
-                  ? "bg-red-100 border-red-400"
+                  ? 'bg-red-100 border-red-400'
                   : gameState.warningCount > 0
-                  ? "bg-orange-100 border-orange-300"
-                  : "bg-green-100 border-green-300"
+                  ? 'bg-orange-100 border-orange-300'
+                  : 'bg-green-100 border-green-300'
               }`}
             >
               <p className="text-sm font-medium text-slate-700 mb-1">
@@ -73,10 +71,10 @@ export default function Monitors() {
               <p
                 className={`text-2xl font-bold ${
                   gameState.warningCount >= 3
-                    ? "text-red-900"
+                    ? 'text-red-900'
                     : gameState.warningCount > 0
-                    ? "text-orange-900"
-                    : "text-green-900"
+                    ? 'text-orange-900'
+                    : 'text-green-900'
                 }`}
               >
                 {gameState.warningCount} / 3
@@ -91,7 +89,6 @@ export default function Monitors() {
               </p>
             </div>
           </div>
-        </div>
       </CardContent>
     </Card>
   );
