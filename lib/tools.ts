@@ -2,138 +2,172 @@ import {
   Battery,
   PowerOff,
   Car,
-  Zap,
   Wrench,
   Home,
   Building2,
 } from 'lucide-react';
 
 export type ToolImpact = 'supply' | 'demand';
-export type ToolType = 'instant' | 'duration';
+export type ToolType = 'slider' | 'toggle';
 
-export interface Tool {
+/**
+ * Base tool interface
+ */
+export interface BaseTool {
   id: string;
   name: string;
   description: string;
   impact: ToolImpact;
   type: ToolType;
-  multiplier: number; // Effect strength
-  duration?: number; // Duration in game years (for duration tools)
-  cooldown: number; // Cooldown in game years
-  cost?: number; // Optional cost (for future use)
   icon: React.ElementType;
 }
 
-export interface ActiveTool extends Tool {
-  startTime: number;
-  endTime: number;
-  isOnCooldown: boolean;
-  cooldownEndTime: number;
+/**
+ * Slider tool - continuous value control
+ * Value represents the adjustment as a decimal (e.g., -0.15 = -15%, 0.10 = +10%)
+ */
+export interface SliderTool extends BaseTool {
+  type: 'slider';
+  min: number; // Minimum value (e.g., -0.15)
+  max: number; // Maximum value (e.g., 0.15)
+  step: number; // Step size (e.g., 0.01 for 1%)
+  defaultValue: number; // Default/neutral value (usually 0)
 }
 
-// Supply Tools - increase energy supply
-export const SUPPLY_TOOLS: Tool[] = [
+/**
+ * Toggle tool - on/off switch
+ * When ON, applies the multiplier effect
+ */
+export interface ToggleTool extends BaseTool {
+  type: 'toggle';
+  multiplier: number; // Multiplier when toggle is ON (e.g., 0.85 = -15%, 1.10 = +10%)
+}
+
+export type Tool = SliderTool | ToggleTool;
+
+/**
+ * Tool state - tracks current value/state of each tool
+ */
+export interface ToolState {
+  id: string;
+  value: number; // For slider: current value, for toggle: 0 (off) or 1 (on)
+}
+
+// Slider Tools
+export const SLIDER_TOOLS: SliderTool[] = [
   {
-    id: 'battery-discharge',
-    name: 'Battery Discharge',
-    description: 'Release stored energy from battery systems',
-    impact: 'supply',
-    type: 'duration',
-    multiplier: 1.15, // +15% supply
-    duration: 0.08, // ~1 month
-    cooldown: 0.25, // 3 months cooldown
-    icon: Battery,
+    id: 'ev-charging',
+    name: 'EV Charging Control',
+    description: 'Delay charging (left) or accelerate charging (right)',
+    impact: 'demand',
+    type: 'slider',
+    min: -0.15, // -15% demand (delay charging)
+    max: 0.15, // +15% demand (accelerate charging)
+    step: 0.01,
+    defaultValue: 0,
+    icon: Car,
   },
   {
-    id: 'fix-infrastructure',
-    name: 'Emergency Repairs',
-    description: 'Rapidly repair damaged infrastructure to restore generation',
+    id: 'residential-load',
+    name: 'Residential Load Control',
+    description: 'Decrease (left) or increase (right) residential consumption',
+    impact: 'demand',
+    type: 'slider',
+    min: -0.15, // -15% demand
+    max: 0.15, // +15% demand
+    step: 0.01,
+    defaultValue: 0,
+    icon: Home,
+  },
+  {
+    id: 'industrial-load',
+    name: 'Industrial Load Shifting',
+    description: 'Shift industrial loads to reduce (left) or increase (right) demand',
+    impact: 'demand',
+    type: 'slider',
+    min: -0.20, // -20% demand
+    max: 0.20, // +20% demand
+    step: 0.01,
+    defaultValue: 0,
+    icon: Building2,
+  },
+  {
+    id: 'battery-storage',
+    name: 'Battery Storage Control',
+    description: 'Send to storage (left) or draw from storage (right)',
     impact: 'supply',
-    type: 'instant',
-    multiplier: 1.1, // +10% supply
-    cooldown: 0.5, // 6 months cooldown
-    icon: Wrench,
+    type: 'slider',
+    min: -0.15, // -15% supply (sending to storage)
+    max: 0.15, // +15% supply (drawing from storage)
+    step: 0.01,
+    defaultValue: 0,
+    icon: Battery,
   },
 ];
 
-// Demand Tools - reduce energy demand
-export const DEMAND_TOOLS: Tool[] = [
+// Toggle Tools
+export const TOGGLE_TOOLS: ToggleTool[] = [
   {
     id: 'pause-non-essential',
     name: 'Pause Non-Essential Loads',
     description: 'Temporarily reduce power to non-critical systems',
     impact: 'demand',
-    type: 'duration',
-    multiplier: 0.85, // -15% demand
-    duration: 0.05, // ~2 weeks
-    cooldown: 0.17, // ~2 months cooldown
+    type: 'toggle',
+    multiplier: 0.85, // -15% demand when ON
     icon: PowerOff,
   },
   {
-    id: 'delay-ev-charging',
-    name: 'Delay EV Charging',
-    description: 'Postpone electric vehicle charging to off-peak hours',
-    impact: 'demand',
-    type: 'duration',
-    multiplier: 0.9, // -10% demand
-    duration: 0.08, // ~1 month
-    cooldown: 0.25, // 3 months cooldown
-    icon: Car,
-  },
-  {
-    id: 'accelerate-ev-charging',
-    name: 'Accelerate EV Charging',
-    description: 'Encourage early EV charging during surplus periods',
-    impact: 'demand',
-    type: 'duration',
-    multiplier: 1.12, // +12% demand (to use excess supply)
-    duration: 0.05, // ~2 weeks
-    cooldown: 0.17, // ~2 months cooldown
-    icon: Zap,
-  },
-  {
-    id: 'residential-reduction',
-    name: 'Residential Load Reduction',
-    description: 'Public campaign to reduce household energy usage',
-    impact: 'demand',
-    type: 'duration',
-    multiplier: 0.92, // -8% demand
-    duration: 0.17, // ~2 months
-    cooldown: 0.5, // 6 months cooldown
-    icon: Home,
-  },
-  {
-    id: 'industrial-shift',
-    name: 'Industrial Load Shifting',
-    description: 'Coordinate with industries to shift high-demand operations',
-    impact: 'demand',
-    type: 'duration',
-    multiplier: 0.88, // -12% demand
-    duration: 0.08, // ~1 month
-    cooldown: 0.33, // ~4 months cooldown
-    icon: Building2,
+    id: 'emergency-repairs',
+    name: 'Emergency Repairs',
+    description: 'Rapidly repair infrastructure to restore generation',
+    impact: 'supply',
+    type: 'toggle',
+    multiplier: 1.10, // +10% supply when ON
+    icon: Wrench,
   },
 ];
 
 // Combined tool pool
-export const ALL_TOOLS: Tool[] = [...SUPPLY_TOOLS, ...DEMAND_TOOLS];
+export const ALL_TOOLS: Tool[] = [...SLIDER_TOOLS, ...TOGGLE_TOOLS];
 
 // Helper function to get tool by ID
 export function getToolById(id: string): Tool | undefined {
-  return ALL_TOOLS.find(tool => tool.id === id);
+  return ALL_TOOLS.find((tool) => tool.id === id);
 }
 
-// Helper function to create an active tool
-export function createActiveTool(tool: Tool, currentTime: number): ActiveTool {
-  const endTime = tool.type === 'duration' && tool.duration
-    ? currentTime + tool.duration
-    : currentTime;
+/**
+ * Calculate the multiplier effect for a given tool and value
+ * @param tool - The tool definition
+ * @param value - The current value (for slider) or state (for toggle: 0/1)
+ * @returns The multiplier to apply (e.g., 0.9 = -10%, 1.1 = +10%)
+ */
+export function calculateToolMultiplier(tool: Tool, value: number): number {
+  if (tool.type === 'slider') {
+    // For sliders, value is the direct adjustment (e.g., -0.10 = -10%)
+    // Convert to multiplier: value of -0.10 becomes multiplier of 0.90
+    return 1 + value;
+  } else {
+    // For toggles, value is 0 (off) or 1 (on)
+    if (value === 0) {
+      return 1; // No effect when off
+    }
+    return tool.multiplier; // Apply multiplier when on
+  }
+}
 
-  return {
-    ...tool,
-    startTime: currentTime,
-    endTime,
-    isOnCooldown: false,
-    cooldownEndTime: currentTime + tool.cooldown,
-  };
+/**
+ * Get default tool states (all tools at neutral/off position)
+ */
+export function getDefaultToolStates(): Record<string, number> {
+  const states: Record<string, number> = {};
+
+  ALL_TOOLS.forEach((tool) => {
+    if (tool.type === 'slider') {
+      states[tool.id] = tool.defaultValue;
+    } else {
+      states[tool.id] = 0; // Toggle off by default
+    }
+  });
+
+  return states;
 }

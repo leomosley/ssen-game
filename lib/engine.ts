@@ -1,5 +1,5 @@
 import { ActiveEvent, ALL_EVENTS, createActiveEvent } from './events';
-import { ActiveTool, Tool, createActiveTool } from './tools';
+import { Tool, ALL_TOOLS, calculateToolMultiplier, getDefaultToolStates } from './tools';
 
 export interface GameEngineConfig {
   initialPopulation?: number;
@@ -24,7 +24,7 @@ export interface GameState {
   populationMultiplier: number;
   isRunning: boolean;
   activeEvents: ActiveEvent[];
-  activeTools: ActiveTool[];
+  toolStates: Record<string, number>; // Current value/state of each tool
   totalDemand: number;
   totalSupply: number;
   capacityFactor: number; // demand / supply ratio (grid utilization)
@@ -106,7 +106,7 @@ export class GameEngine {
       populationMultiplier: 1,
       isRunning: false,
       activeEvents: [],
-      activeTools: [],
+      toolStates: getDefaultToolStates(),
       totalDemand: initialDemand,
       totalSupply: initialSupply,
       capacityFactor: initialDemand / initialSupply,
@@ -157,7 +157,7 @@ export class GameEngine {
       populationMultiplier: 1,
       isRunning: false,
       activeEvents: [],
-      activeTools: [],
+      toolStates: getDefaultToolStates(),
       totalDemand: initialDemand,
       totalSupply: initialSupply,
       capacityFactor: initialDemand / initialSupply,
@@ -217,9 +217,6 @@ export class GameEngine {
 
     // Event management - check for new events and remove expired ones
     this.updateEvents();
-
-    // Tool management - remove expired tools and update cooldowns
-    this.updateTools();
 
     // Calculate network demand and supply with event and tool multipliers
     this.calculateNetworkMetrics();
@@ -287,56 +284,23 @@ export class GameEngine {
   }
 
   /**
-   * Update active tools - remove expired ones and update cooldowns
+   * Set the value/state of a tool
+   * @param toolId - The ID of the tool to update
+   * @param value - For sliders: the value (-0.15 to 0.15), for toggles: 0 (off) or 1 (on)
    */
-  private updateTools(): void {
-    // Remove expired tools
-    this.state.activeTools = this.state.activeTools.filter(tool => {
-      if (tool.endTime > this.state.currentTime) {
-        return true;
-      }
-      // Tool expired, set to cooldown
-      tool.isOnCooldown = true;
-      return false;
-    });
-
-    // Update cooldown status
-    this.state.activeTools.forEach(tool => {
-      if (tool.isOnCooldown && this.state.currentTime >= tool.cooldownEndTime) {
-        tool.isOnCooldown = false;
-      }
-    });
-  }
-
-  /**
-   * Use a tool to manage network pressure
-   */
-  useTool(tool: Tool): boolean {
-    // Check if tool is already active or on cooldown
-    const existingTool = this.state.activeTools.find(t => t.id === tool.id);
-    if (existingTool && (existingTool.endTime > this.state.currentTime || existingTool.isOnCooldown)) {
-      return false; // Tool is active or on cooldown
-    }
-
-    // Create and add active tool
-    const activeTool = createActiveTool(tool, this.state.currentTime);
-    this.state.activeTools.push(activeTool);
+  setToolValue(toolId: string, value: number): void {
+    this.state.toolStates[toolId] = value;
 
     // Recalculate metrics immediately
     this.calculateNetworkMetrics();
     this.notifyListeners(this.onStateUpdate);
-
-    return true;
   }
 
   /**
-   * Check if a tool is available (not active and not on cooldown)
+   * Get the current value/state of a tool
    */
-  isToolAvailable(toolId: string): boolean {
-    const tool = this.state.activeTools.find(t => t.id === toolId);
-    if (!tool) return true; // Tool has never been used
-
-    return this.state.currentTime >= tool.cooldownEndTime;
+  getToolValue(toolId: string): number {
+    return this.state.toolStates[toolId] ?? 0;
   }
 
   /**
@@ -352,10 +316,14 @@ export class GameEngine {
       .filter(e => e.impact === 'demand')
       .reduce((acc, event) => acc * event.multiplier, 1);
 
-    // Apply demand tool multipliers (only active tools, not on cooldown)
-    const demandToolMultiplier = this.state.activeTools
-      .filter(t => t.impact === 'demand' && t.endTime > this.state.currentTime)
-      .reduce((acc, tool) => acc * tool.multiplier, 1);
+    // Apply demand tool multipliers
+    const demandToolMultiplier = ALL_TOOLS
+      .filter((tool: Tool) => tool.impact === 'demand')
+      .reduce((acc: number, tool: Tool) => {
+        const value = this.state.toolStates[tool.id] ?? 0;
+        const multiplier = calculateToolMultiplier(tool, value);
+        return acc * multiplier;
+      }, 1);
 
     this.state.totalDemand = baseDemand * demandEventMultiplier * demandToolMultiplier;
 
@@ -369,10 +337,14 @@ export class GameEngine {
       .filter(e => e.impact === 'supply')
       .reduce((acc, event) => acc * event.multiplier, 1);
 
-    // Apply supply tool multipliers (only active tools, not on cooldown)
-    const supplyToolMultiplier = this.state.activeTools
-      .filter(t => t.impact === 'supply' && t.endTime > this.state.currentTime)
-      .reduce((acc, tool) => acc * tool.multiplier, 1);
+    // Apply supply tool multipliers
+    const supplyToolMultiplier = ALL_TOOLS
+      .filter((tool: Tool) => tool.impact === 'supply')
+      .reduce((acc: number, tool: Tool) => {
+        const value = this.state.toolStates[tool.id] ?? 0;
+        const multiplier = calculateToolMultiplier(tool, value);
+        return acc * multiplier;
+      }, 1);
 
     this.state.totalSupply = baseSupply * supplyEventMultiplier * supplyToolMultiplier;
 

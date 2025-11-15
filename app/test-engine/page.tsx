@@ -1,10 +1,10 @@
 "use client";
 
 import { GameProvider, useGameContext } from "@/lib/context/game-context";
-import { ALL_TOOLS } from "@/lib/tools";
+import { SLIDER_TOOLS, TOGGLE_TOOLS } from "@/lib/tools";
 
 function TestEngineContent() {
-  const { gameState, tickInterval, toggle, reset, applyTool, isToolAvailable } =
+  const { gameState, tickInterval, toggle, reset, setToolValue, getToolValue } =
     useGameContext();
 
   return (
@@ -375,81 +375,139 @@ function TestEngineContent() {
           )}
         </div>
 
-        {/* Available Tools */}
+        {/* Flexibility Services - Sliders */}
         <div className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-lg p-6">
-          <h3 className="font-semibold text-indigo-900 mb-3">
-            Flexibility Services
+          <h3 className="font-semibold text-indigo-900 mb-4">
+            Flexibility Services - Continuous Controls
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {ALL_TOOLS.map((tool) => {
+          <div className="space-y-6">
+            {SLIDER_TOOLS.map((tool) => {
               const Icon = tool.icon;
-              const available = isToolAvailable(tool.id);
-              const activeTool = gameState.activeTools.find(
-                (t) => t.id === tool.id
-              );
+              const value = gameState.toolStates[tool.id] ?? tool.defaultValue;
+              const percentage = (value * 100).toFixed(0);
+              const isNegative = value < 0;
+              const isPositive = value > 0;
 
               return (
-                <button
+                <div key={tool.id} className="bg-white rounded-lg p-4 border border-indigo-300">
+                  <div className="flex items-start gap-3 mb-3">
+                    <Icon className="w-5 h-5 mt-0.5 text-indigo-600" />
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <p className="font-semibold text-sm text-indigo-900">
+                          {tool.name}
+                        </p>
+                        <span
+                          className={`text-sm font-bold ${
+                            isPositive
+                              ? "text-red-600"
+                              : isNegative
+                              ? "text-green-600"
+                              : "text-slate-600"
+                          }`}
+                        >
+                          {isPositive ? "+" : ""}
+                          {percentage}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1">
+                        {tool.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Slider */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-slate-500 w-12 text-right">
+                      {(tool.min * 100).toFixed(0)}%
+                    </span>
+                    <input
+                      type="range"
+                      min={tool.min}
+                      max={tool.max}
+                      step={tool.step}
+                      value={value}
+                      onChange={(e) => setToolValue(tool.id, parseFloat(e.target.value))}
+                      className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    />
+                    <span className="text-xs text-slate-500 w-12">
+                      +{(tool.max * 100).toFixed(0)}%
+                    </span>
+                  </div>
+
+                  {/* Center marker */}
+                  <div className="flex items-center justify-center mt-1">
+                    <span className="text-xs text-slate-400">← Reduce | Neutral | Increase →</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Flexibility Services - Toggles */}
+        <div className="w-full bg-purple-50 border-2 border-purple-200 rounded-lg p-6">
+          <h3 className="font-semibold text-purple-900 mb-4">
+            Flexibility Services - On/Off Controls
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {TOGGLE_TOOLS.map((tool) => {
+              const Icon = tool.icon;
+              const isOn = (gameState.toolStates[tool.id] ?? 0) === 1;
+              const effectPercentage = ((tool.multiplier - 1) * 100).toFixed(0);
+              const isIncrease = tool.multiplier > 1;
+
+              return (
+                <div
                   key={tool.id}
-                  onClick={() => applyTool(tool)}
-                  disabled={!available}
-                  className={`p-3 rounded border text-left transition-all ${
-                    !available
-                      ? "bg-gray-100 border-gray-300 cursor-not-allowed opacity-60"
-                      : "bg-white border-indigo-300 hover:bg-indigo-50 cursor-pointer"
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    isOn
+                      ? "bg-purple-100 border-purple-400"
+                      : "bg-white border-purple-300"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 mb-3">
                     <Icon
                       className={`w-5 h-5 mt-0.5 ${
-                        available ? "text-indigo-600" : "text-gray-400"
+                        isOn ? "text-purple-700" : "text-purple-500"
                       }`}
                     />
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <p
                           className={`font-semibold text-sm ${
-                            available ? "text-indigo-900" : "text-gray-600"
+                            isOn ? "text-purple-900" : "text-purple-800"
                           }`}
                         >
                           {tool.name}
                         </p>
                         <span
                           className={`text-xs font-bold ${
-                            tool.multiplier > 1
-                              ? "text-red-600"
-                              : "text-green-600"
+                            isIncrease ? "text-green-600" : "text-red-600"
                           }`}
                         >
-                          {tool.multiplier > 1 ? "+" : ""}
-                          {((tool.multiplier - 1) * 100).toFixed(0)}%
+                          {isIncrease ? "+" : ""}
+                          {effectPercentage}%
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 mt-1">
                         {tool.description}
                       </p>
-                      {activeTool &&
-                        activeTool.endTime > gameState.currentTime && (
-                          <p className="text-xs text-indigo-600 mt-1 font-medium">
-                            Active -{" "}
-                            {(
-                              activeTool.endTime - gameState.currentTime
-                            ).toFixed(1)}
-                            y left
-                          </p>
-                        )}
-                      {activeTool && activeTool.isOnCooldown && (
-                        <p className="text-xs text-orange-600 mt-1">
-                          Cooldown -{" "}
-                          {(
-                            activeTool.cooldownEndTime - gameState.currentTime
-                          ).toFixed(1)}
-                          y
-                        </p>
-                      )}
                     </div>
                   </div>
-                </button>
+
+                  {/* Toggle Button */}
+                  <button
+                    onClick={() => setToolValue(tool.id, isOn ? 0 : 1)}
+                    className={`w-full py-2 px-4 rounded-lg font-semibold text-sm transition-all ${
+                      isOn
+                        ? "bg-purple-600 hover:bg-purple-700 text-white"
+                        : "bg-purple-200 hover:bg-purple-300 text-purple-900"
+                    }`}
+                  >
+                    {isOn ? "ON - Click to Turn Off" : "OFF - Click to Turn On"}
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -459,7 +517,7 @@ function TestEngineContent() {
         <div className="w-full bg-zinc-100 rounded-lg p-6 border border-zinc-200">
           <h3 className="font-semibold text-zinc-900 mb-2">About This Test</h3>
           <ul className="text-sm text-zinc-700 space-y-1">
-            <li>• Simulates 100 game years over 120 real-world minutes</li>
+            <li>• Simulates 500 game years over 120 real-world minutes</li>
             <li>
               • Population grows from ~2,000 (village) to ~500,000 (large city)
             </li>
@@ -470,7 +528,8 @@ function TestEngineContent() {
               • Capacity factor should stay between 80-95% for optimal grid
               operation
             </li>
-            <li>• Use flexibility services to balance demand and supply</li>
+            <li>• Use sliders to continuously adjust demand/supply controls</li>
+            <li>• Use toggles to turn on/off emergency measures</li>
           </ul>
         </div>
       </main>
