@@ -1,9 +1,10 @@
 "use client";
 
 import { useGame } from "@/lib/hooks/use-game";
+import { ALL_TOOLS } from "@/lib/tools";
 
 export default function TestEngine() {
-  const { gameState, tickInterval, toggle, reset } = useGame({
+  const { gameState, tickInterval, toggle, reset, applyTool, isToolAvailable } = useGame({
     initialPopulation: 2000, // small village
     targetGameYears: 100,
     targetRealMinutes: 120,
@@ -274,6 +275,77 @@ export default function TestEngine() {
               })}
             </div>
           )}
+        </div>
+
+        {/* Available Tools */}
+        <div className="w-full bg-indigo-50 border-2 border-indigo-200 rounded-lg p-6">
+          <h3 className="font-semibold text-indigo-900 mb-3">
+            Flexibility Services
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {ALL_TOOLS.map((tool) => {
+              const Icon = tool.icon;
+              const available = isToolAvailable(tool.id);
+              const activeTool = gameState.activeTools.find(
+                (t) => t.id === tool.id
+              );
+
+              return (
+                <button
+                  key={tool.id}
+                  onClick={() => applyTool(tool)}
+                  disabled={!available}
+                  className={`p-3 rounded border text-left transition-all ${
+                    !available
+                      ? "bg-gray-100 border-gray-300 cursor-not-allowed opacity-60"
+                      : "bg-white border-indigo-300 hover:bg-indigo-50 cursor-pointer"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <Icon
+                      className={`w-5 h-5 mt-0.5 ${
+                        available ? "text-indigo-600" : "text-gray-400"
+                      }`}
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <p
+                          className={`font-semibold text-sm ${
+                            available ? "text-indigo-900" : "text-gray-600"
+                          }`}
+                        >
+                          {tool.name}
+                        </p>
+                        <span
+                          className={`text-xs font-bold ${
+                            tool.multiplier > 1
+                              ? "text-red-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {tool.multiplier > 1 ? "+" : ""}
+                          {((tool.multiplier - 1) * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1">
+                        {tool.description}
+                      </p>
+                      {activeTool && activeTool.endTime > gameState.currentTime && (
+                        <p className="text-xs text-indigo-600 mt-1 font-medium">
+                          Active - {(activeTool.endTime - gameState.currentTime).toFixed(1)}y left
+                        </p>
+                      )}
+                      {activeTool && activeTool.isOnCooldown && (
+                        <p className="text-xs text-orange-600 mt-1">
+                          Cooldown - {(activeTool.cooldownEndTime - gameState.currentTime).toFixed(1)}y
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Info */}

@@ -1,4 +1,5 @@
 import { ActiveEvent, ALL_EVENTS, createActiveEvent } from './events';
+import { ActiveTool, Tool, createActiveTool } from './tools';
 
 export interface GameEngineConfig {
   initialPopulation?: number;
@@ -23,6 +24,7 @@ export interface GameState {
   populationMultiplier: number;
   isRunning: boolean;
   activeEvents: ActiveEvent[];
+  activeTools: ActiveTool[];
   totalDemand: number;
   totalSupply: number;
   networkPressure: number; // demand / supply ratio
@@ -82,6 +84,7 @@ export class GameEngine {
       populationMultiplier: 1,
       isRunning: false,
       activeEvents: [],
+      activeTools: [],
       totalDemand: initialDemand,
       totalSupply: initialSupply,
       networkPressure: initialDemand / initialSupply,
@@ -128,6 +131,7 @@ export class GameEngine {
       populationMultiplier: 1,
       isRunning: false,
       activeEvents: [],
+      activeTools: [],
       totalDemand: initialDemand,
       totalSupply: initialSupply,
       networkPressure: initialDemand / initialSupply,
@@ -184,7 +188,10 @@ export class GameEngine {
     // Event management - check for new events and remove expired ones
     this.updateEvents();
 
-    // Calculate network demand and supply with event multipliers
+    // Tool management - remove expired tools and update cooldowns
+    this.updateTools();
+
+    // Calculate network demand and supply with event and tool multipliers
     this.calculateNetworkMetrics();
 
     // Update tick interval (gets slower over time exponentially, but capped)
@@ -247,29 +254,92 @@ export class GameEngine {
   }
 
   /**
+   * Update active tools - remove expired ones and update cooldowns
+   */
+  private updateTools(): void {
+    // Remove expired tools
+    this.state.activeTools = this.state.activeTools.filter(tool => {
+      if (tool.endTime > this.state.currentTime) {
+        return true;
+      }
+      // Tool expired, set to cooldown
+      tool.isOnCooldown = true;
+      return false;
+    });
+
+    // Update cooldown status
+    this.state.activeTools.forEach(tool => {
+      if (tool.isOnCooldown && this.state.currentTime >= tool.cooldownEndTime) {
+        tool.isOnCooldown = false;
+      }
+    });
+  }
+
+  /**
+   * Use a tool to manage network pressure
+   */
+  useTool(tool: Tool): boolean {
+    // Check if tool is already active or on cooldown
+    const existingTool = this.state.activeTools.find(t => t.id === tool.id);
+    if (existingTool && (existingTool.endTime > this.state.currentTime || existingTool.isOnCooldown)) {
+      return false; // Tool is active or on cooldown
+    }
+
+    // Create and add active tool
+    const activeTool = createActiveTool(tool, this.state.currentTime);
+    this.state.activeTools.push(activeTool);
+
+    // Recalculate metrics immediately
+    this.calculateNetworkMetrics();
+    this.notifyListeners(this.onStateUpdate);
+
+    return true;
+  }
+
+  /**
+   * Check if a tool is available (not active and not on cooldown)
+   */
+  isToolAvailable(toolId: string): boolean {
+    const tool = this.state.activeTools.find(t => t.id === toolId);
+    if (!tool) return true; // Tool has never been used
+
+    return this.state.currentTime >= tool.cooldownEndTime;
+  }
+
+  /**
    * Calculate network demand, supply, and pressure
-   * Formula: (Population * Demand) + events = pressure on network
+   * Formula: (Population * Demand) + events + tools = pressure on network
    */
   private calculateNetworkMetrics(): void {
     // Base demand from population
     const baseDemand = this.state.currentPopulation * BASE_DEMAND_PER_PERSON;
 
     // Apply demand event multipliers
-    const demandMultiplier = this.state.activeEvents
+    const demandEventMultiplier = this.state.activeEvents
       .filter(e => e.impact === 'demand')
       .reduce((acc, event) => acc * event.multiplier, 1);
 
-    this.state.totalDemand = baseDemand * demandMultiplier;
+    // Apply demand tool multipliers (only active tools, not on cooldown)
+    const demandToolMultiplier = this.state.activeTools
+      .filter(t => t.impact === 'demand' && t.endTime > this.state.currentTime)
+      .reduce((acc, tool) => acc * tool.multiplier, 1);
+
+    this.state.totalDemand = baseDemand * demandEventMultiplier * demandToolMultiplier;
 
     // Base supply (grows slowly with population to keep pace somewhat)
     const baseSupply = this.config.baseSupply + (this.state.currentPopulation - this.config.initialPopulation) * 2;
 
     // Apply supply event multipliers
-    const supplyMultiplier = this.state.activeEvents
+    const supplyEventMultiplier = this.state.activeEvents
       .filter(e => e.impact === 'supply')
       .reduce((acc, event) => acc * event.multiplier, 1);
 
-    this.state.totalSupply = baseSupply * supplyMultiplier;
+    // Apply supply tool multipliers (only active tools, not on cooldown)
+    const supplyToolMultiplier = this.state.activeTools
+      .filter(t => t.impact === 'supply' && t.endTime > this.state.currentTime)
+      .reduce((acc, tool) => acc * tool.multiplier, 1);
+
+    this.state.totalSupply = baseSupply * supplyEventMultiplier * supplyToolMultiplier;
 
     // Calculate network pressure (demand/supply ratio)
     // Ideal pressure is around 0.8-0.9 (80-90% utilization)

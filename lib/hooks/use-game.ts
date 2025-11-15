@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { GameEngine, GameState, GameEngineConfig } from '../engine';
+import { Tool } from '../tools';
 
 export interface UseGameOptions extends GameEngineConfig {
   autoStart?: boolean;
@@ -12,6 +13,8 @@ export interface UseGameReturn {
   stop: () => void;
   reset: () => void;
   toggle: () => void;
+  applyTool: (tool: Tool) => boolean;
+  isToolAvailable: (toolId: string) => boolean;
 }
 
 export function useGame(options: UseGameOptions = {}): UseGameReturn {
@@ -26,6 +29,7 @@ export function useGame(options: UseGameOptions = {}): UseGameReturn {
     populationMultiplier: 1,
     isRunning: false,
     activeEvents: [],
+    activeTools: [],
     totalDemand: 0,
     totalSupply: 0,
     networkPressure: 0,
@@ -81,6 +85,20 @@ export function useGame(options: UseGameOptions = {}): UseGameReturn {
     }
   }, [gameState.isRunning]);
 
+  const applyTool = useCallback((tool: Tool): boolean => {
+    if (engineRef.current) {
+      return engineRef.current.useTool(tool);
+    }
+    return false;
+  }, []);
+
+  const isToolAvailable = useCallback((toolId: string): boolean => {
+    if (engineRef.current) {
+      return engineRef.current.isToolAvailable(toolId);
+    }
+    return true;
+  }, []);
+
   return {
     gameState,
     tickInterval,
@@ -88,5 +106,7 @@ export function useGame(options: UseGameOptions = {}): UseGameReturn {
     stop,
     reset,
     toggle,
+    applyTool,
+    isToolAvailable,
   };
 }
