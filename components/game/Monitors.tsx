@@ -6,9 +6,9 @@ import { useGameContext } from "@/lib/context/game-context";
 export default function Monitors() {
   const { gameState } = useGameContext();
   return (
-    <Card className="w-[45dvw]">
+    <Card className="w-full h-fit">
       <CardHeader>
-        <CardTitle className="font-semibold text-slate-900 mb-4">
+        <CardTitle className="font-semibold text-slate-900">
           Grid Capacity Factor
         </CardTitle>
       </CardHeader>
@@ -89,8 +89,8 @@ export default function Monitors() {
           </div>
         </div> */}
 
-        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
-          <div className="space-y-2 ">
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div className="space-y-2">
             <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
               <p className="text-sm text-amber-700 font-medium mb-1">
                 Total Demand
@@ -108,22 +108,25 @@ export default function Monitors() {
               </p>
             </div>
           </div>
-          <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 w-fit">
-            <h2 className="text-lg font-semibold text-green-900">Population</h2>
-            <div>
-              <div className="mb-2">
-                <p className="text-3xl font-bold text-green-900">
-                  {Math.floor(gameState.currentPopulation).toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-green-700 font-medium">
-                  Settlement Type
-                </p>
-                <p className="text-xl font-semibold text-green-800">
-                  {gameState.infrastructureTier}
-                </p>
-              </div>
+          <div className="space-y-2">
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-700 font-medium mb-1">
+                Years Elapsed
+              </p>
+              <p className="text-2xl font-bold text-blue-900">
+                {gameState.currentTime.toFixed(1)} years
+              </p>
+            </div>
+            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+              <p className="text-sm text-green-700 font-medium mb-1">
+                Population
+              </p>
+              <p className="text-2xl font-bold text-green-900">
+                {Math.floor(gameState.currentPopulation).toLocaleString()}
+              </p>
+              <p className="text-xs text-green-700 font-medium mt-1">
+                {gameState.infrastructureTier}
+              </p>
             </div>
           </div>
         </div>
