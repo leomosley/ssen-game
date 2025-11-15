@@ -76,8 +76,8 @@ export const SLIDER_TOOLS: SliderTool[] = [
     info: 'Residential load reduction helps the energy network by temporarily lowering electricity demand from households, easing stress on local feeders, transformers, and substations during peak periods. By reducing or pausing non-essential appliances such as heating, cooling, or EV charging, the grid can maintain voltage stability, prevent overloads, and reduce the risk of outages. Coordinated residential load reduction also supports the integration of variable renewable generation by shifting consumption to align with periods of high renewable output. This flexibility decreases reliance on expensive peaker plants, improves overall grid efficiency, and enhances system resilience. When effectively managed, residential load reduction provides a controllable, distributed resource that helps balance supply and demand while minimizing disruption to essential household services.',
     impact: 'demand',
     type: 'slider',
-    min: -0.5, // -15% demand
-    max: 0.5, // +15% demand
+    min: -0.8, // -15% demand
+    max: 1, // +15% demand
     step: 0.1,
     defaultValue: 0,
     icon: Home,
@@ -89,8 +89,8 @@ export const SLIDER_TOOLS: SliderTool[] = [
     info: 'Shifting industrial loads allows the energy network to better balance supply and demand by moving large electricity consumption from peak periods to times of lower demand. By temporarily reducing or delaying energy-intensive processes, factories and industrial sites can relieve stress on local and regional feeders, prevent overloading of transformers, and maintain voltage stability. This flexibility helps the grid integrate variable renewable generation by aligning industrial consumption with periods of high renewable output, such as daytime solar peaks. Coordinated load shifting can reduce the need for expensive peaker plants, lower operational costs, and improve overall grid efficiency. When managed effectively, industrial load shifting enhances grid resilience, supports a low-carbon energy system, and provides a controllable resource that operators can use to maintain stability without affecting essential production processes.',
     impact: 'demand',
     type: 'slider',
-    min: -0.8, // -20% demand
-    max: 1, // +20% demand
+    min: -0.5, // -20% demand
+    max: 0.5, // +20% demand
     step: 0.1,
     defaultValue: 0,
     icon: Building2,
