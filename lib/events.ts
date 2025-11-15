@@ -210,12 +210,7 @@ export const ALL_EVENTS: GameEvent[] = [...DEMAND_EVENTS, ...SUPPLY_EVENTS];
 export function getRandomEvent(): GameEvent | null {
   const event = ALL_EVENTS[Math.floor(Math.random() * ALL_EVENTS.length)];
 
-  // Check if event should occur based on probability
-  if (Math.random() < event.probability) {
-    return event;
-  }
-
-  return null;
+  return event;
 }
 
 // Helper function to check if an event should trigger
@@ -224,7 +219,10 @@ export function shouldTriggerEvent(event: GameEvent): boolean {
 }
 
 // Helper function to create an active event
-export function createActiveEvent(event: GameEvent, currentTime: number): ActiveEvent {
+export function createActiveEvent(
+  event: GameEvent,
+  currentTime: number
+): ActiveEvent {
   return {
     ...event,
     startTime: currentTime,
