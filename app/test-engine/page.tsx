@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { GameProvider, useGameContext } from "@/lib/context/game-context";
-import { SLIDER_TOOLS, TOGGLE_TOOLS } from "@/lib/tools";
+import { SLIDER_TOOLS, TOGGLE_TOOLS, Tool } from "@/lib/tools";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
+import { Info, X } from "lucide-react";
 
 function TestEngineContent() {
   const { gameState, tickInterval, toggle, reset, setToolValue, getToolValue } =
     useGameContext();
+  const [infoDialogTool, setInfoDialogTool] = useState<Tool | null>(null);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans">
@@ -394,9 +398,18 @@ function TestEngineContent() {
                     <Icon className="w-5 h-5 mt-0.5 text-indigo-600" />
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
-                        <p className="font-semibold text-sm text-indigo-900">
-                          {tool.name}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-sm text-indigo-900">
+                            {tool.name}
+                          </p>
+                          <button
+                            onClick={() => setInfoDialogTool(tool)}
+                            className="text-indigo-500 hover:text-indigo-700 transition-colors"
+                            title="More information"
+                          >
+                            <Info className="w-4 h-4" />
+                          </button>
+                        </div>
                         <span
                           className={`text-sm font-bold ${
                             isPositive
@@ -474,13 +487,22 @@ function TestEngineContent() {
                     />
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
-                        <p
-                          className={`font-semibold text-sm ${
-                            isOn ? "text-purple-900" : "text-purple-800"
-                          }`}
-                        >
-                          {tool.name}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p
+                            className={`font-semibold text-sm ${
+                              isOn ? "text-purple-900" : "text-purple-800"
+                            }`}
+                          >
+                            {tool.name}
+                          </p>
+                          <button
+                            onClick={() => setInfoDialogTool(tool)}
+                            className="text-purple-500 hover:text-purple-700 transition-colors"
+                            title="More information"
+                          >
+                            <Info className="w-4 h-4" />
+                          </button>
+                        </div>
                         <span
                           className={`text-xs font-bold ${
                             isIncrease ? "text-green-600" : "text-red-600"
@@ -532,6 +554,51 @@ function TestEngineContent() {
             <li>• Use toggles to turn on/off emergency measures</li>
           </ul>
         </div>
+
+        {/* Info Dialog */}
+        <Dialog open={infoDialogTool !== null} onOpenChange={(open) => !open && setInfoDialogTool(null)}>
+          <DialogContent>
+            <DialogClose onClick={() => setInfoDialogTool(null)}>
+              <X className="w-5 h-5" />
+            </DialogClose>
+            {infoDialogTool && (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center gap-3 mb-2">
+                    {(() => {
+                      const Icon = infoDialogTool.icon;
+                      return <Icon className="w-6 h-6 text-indigo-600" />;
+                    })()}
+                    <DialogTitle>{infoDialogTool.name}</DialogTitle>
+                  </div>
+                  <DialogDescription>{infoDialogTool.description}</DialogDescription>
+                </DialogHeader>
+                <div className="mt-4">
+                  <h3 className="font-semibold text-sm text-slate-900 mb-2">Detailed Information</h3>
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    {infoDialogTool.info}
+                  </p>
+                  <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600">Impact Type:</span>
+                      <span className={`font-semibold ${
+                        infoDialogTool.impact === 'demand' ? 'text-amber-600' : 'text-cyan-600'
+                      }`}>
+                        {infoDialogTool.impact.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs mt-2">
+                      <span className="text-slate-600">Control Type:</span>
+                      <span className="font-semibold text-slate-900">
+                        {infoDialogTool.type === 'slider' ? 'Continuous (Slider)' : 'Toggle (On/Off)'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
