@@ -4,13 +4,14 @@ import { useGame } from "@/lib/hooks/use-game";
 import { ALL_TOOLS } from "@/lib/tools";
 
 export default function TestEngine() {
-  const { gameState, tickInterval, toggle, reset, applyTool, isToolAvailable } = useGame({
-    initialPopulation: 2000, // small village
-    targetGameYears: 100,
-    targetRealMinutes: 120,
-    populationVolatility: 0.01, // 1% random variance
-    autoStart: true,
-  });
+  const { gameState, tickInterval, toggle, reset, applyTool, isToolAvailable } =
+    useGame({
+      initialPopulation: 2000, // small village
+      targetGameYears: 500,
+      targetRealMinutes: 120,
+      populationVolatility: 0.01, // 1% random variance
+      autoStart: true,
+    });
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans">
@@ -87,10 +88,10 @@ export default function TestEngine() {
               </div>
               <div>
                 <p className="text-sm text-green-700 font-medium">
-                  Population Multiplier
+                  Settlement Type
                 </p>
-                <p className="text-2xl font-semibold text-green-800">
-                  {gameState.populationMultiplier.toFixed(4)}x
+                <p className="text-xl font-semibold text-green-800">
+                  {gameState.infrastructureTier}
                 </p>
               </div>
             </div>
@@ -171,37 +172,141 @@ export default function TestEngine() {
           </div>
           <div
             className={`border-2 rounded-lg p-4 ${
-              gameState.networkPressure < 0.8
+              gameState.capacityFactor < 0.8
+                ? "bg-red-50 border-red-200"
+                : gameState.capacityFactor < 0.95
                 ? "bg-green-50 border-green-200"
-                : gameState.networkPressure < 1.0
-                ? "bg-yellow-50 border-yellow-200"
                 : "bg-red-50 border-red-200"
             }`}
           >
             <p
               className={`text-sm font-medium mb-1 ${
-                gameState.networkPressure < 0.8
+                gameState.capacityFactor < 0.8
+                  ? "text-red-700"
+                  : gameState.capacityFactor < 0.95
                   ? "text-green-700"
-                  : gameState.networkPressure < 1.0
-                  ? "text-yellow-700"
                   : "text-red-700"
               }`}
             >
-              Network Pressure
+              Capacity Factor
             </p>
             <p
               className={`text-2xl font-bold ${
-                gameState.networkPressure < 0.8
+                gameState.capacityFactor < 0.8
+                  ? "text-red-900"
+                  : gameState.capacityFactor < 0.95
                   ? "text-green-900"
-                  : gameState.networkPressure < 1.0
-                  ? "text-yellow-900"
                   : "text-red-900"
               }`}
             >
-              {(gameState.networkPressure * 100).toFixed(1)}%
+              {(gameState.capacityFactor * 100).toFixed(1)}%
             </p>
           </div>
         </div>
+
+        {/* Capacity Factor Gauge */}
+        <div className="w-full bg-white border-2 border-slate-300 rounded-lg p-6">
+          <h3 className="font-semibold text-slate-900 mb-4">
+            Grid Capacity Factor
+          </h3>
+
+          {/* Gauge Bar */}
+          <div className="relative h-12 mb-4">
+            <div className="absolute inset-0 flex">
+              {/* Red zone (0-80%) */}
+              <div className="flex-[80] bg-red-100 border-2 border-red-300 rounded-l-lg flex items-center justify-center">
+                <span className="text-xs font-medium text-red-700">
+                  Inefficient
+                </span>
+              </div>
+              {/* Green zone (80-95%) */}
+              <div className="flex-[15] bg-green-100 border-y-2 border-green-300 flex items-center justify-center">
+                <span className="text-xs font-medium text-green-700">
+                  Optimal
+                </span>
+              </div>
+              {/* Red zone (95-100%) */}
+              <div className="flex-[5] bg-red-100 border-y-2 border-r-2 border-red-300 flex items-center justify-center">
+                <span className="text-xs font-medium text-red-700">Risk</span>
+              </div>
+            </div>
+
+            {/* Current capacity factor indicator */}
+            <div
+              className="absolute top-0 bottom-0 w-1 bg-slate-900 transition-all duration-300"
+              style={{
+                left: `${Math.min(gameState.capacityFactor * 100, 120)}%`,
+              }}
+            >
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-900 whitespace-nowrap">
+                {(gameState.capacityFactor * 100).toFixed(1)}%
+              </div>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center justify-between text-xs text-slate-600 mb-4">
+            <span>0%</span>
+            <span className="font-semibold text-green-700">80%</span>
+            <span className="font-semibold text-green-700">95%</span>
+            <span className="font-semibold text-red-700">100%</span>
+          </div>
+
+          {/* Warnings */}
+          <div className="grid grid-cols-2 gap-4">
+            <div
+              className={`p-3 rounded border-2 ${
+                gameState.warningCount >= 3
+                  ? "bg-red-100 border-red-400"
+                  : gameState.warningCount > 0
+                  ? "bg-orange-100 border-orange-300"
+                  : "bg-green-100 border-green-300"
+              }`}
+            >
+              <p className="text-sm font-medium text-slate-700 mb-1">
+                Warnings
+              </p>
+              <p
+                className={`text-2xl font-bold ${
+                  gameState.warningCount >= 3
+                    ? "text-red-900"
+                    : gameState.warningCount > 0
+                    ? "text-orange-900"
+                    : "text-green-900"
+                }`}
+              >
+                {gameState.warningCount} / 3
+              </p>
+            </div>
+            <div className="p-3 rounded border-2 bg-slate-50 border-slate-300">
+              <p className="text-sm font-medium text-slate-700 mb-1">
+                Ticks in Red Zone
+              </p>
+              <p className="text-2xl font-bold text-slate-900">
+                {gameState.ticksInRedZone} / 10
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Game Over Banner */}
+        {gameState.isGameOver && (
+          <div className="w-full bg-red-600 text-white rounded-lg p-6 border-4 border-red-800">
+            <h2 className="text-2xl font-bold mb-2">GAME OVER</h2>
+            <p className="text-lg">{gameState.gameOverReason}</p>
+            <p className="mt-4 text-sm">
+              You survived {gameState.currentTime.toFixed(1)} years and managed
+              a population of{" "}
+              {Math.floor(gameState.currentPopulation).toLocaleString()}.
+            </p>
+            <button
+              onClick={reset}
+              className="mt-4 px-6 py-3 bg-white text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
 
         {/* Active Events */}
         <div className="w-full bg-slate-50 border-2 border-slate-200 rounded-lg p-6">
@@ -267,8 +372,7 @@ export default function TestEngine() {
                     </div>
                     <div className="mt-2 text-xs text-slate-500">
                       Ends in{" "}
-                      {(event.endTime - gameState.currentTime).toFixed(1)}{" "}
-                      years
+                      {(event.endTime - gameState.currentTime).toFixed(1)} years
                     </div>
                   </div>
                 );
@@ -330,14 +434,23 @@ export default function TestEngine() {
                       <p className="text-xs text-slate-600 mt-1">
                         {tool.description}
                       </p>
-                      {activeTool && activeTool.endTime > gameState.currentTime && (
-                        <p className="text-xs text-indigo-600 mt-1 font-medium">
-                          Active - {(activeTool.endTime - gameState.currentTime).toFixed(1)}y left
-                        </p>
-                      )}
+                      {activeTool &&
+                        activeTool.endTime > gameState.currentTime && (
+                          <p className="text-xs text-indigo-600 mt-1 font-medium">
+                            Active -{" "}
+                            {(
+                              activeTool.endTime - gameState.currentTime
+                            ).toFixed(1)}
+                            y left
+                          </p>
+                        )}
                       {activeTool && activeTool.isOnCooldown && (
                         <p className="text-xs text-orange-600 mt-1">
-                          Cooldown - {(activeTool.cooldownEndTime - gameState.currentTime).toFixed(1)}y
+                          Cooldown -{" "}
+                          {(
+                            activeTool.cooldownEndTime - gameState.currentTime
+                          ).toFixed(1)}
+                          y
                         </p>
                       )}
                     </div>
@@ -360,10 +473,10 @@ export default function TestEngine() {
               • Random events affect supply and demand on the energy network
             </li>
             <li>
-              • Network pressure should stay between 80-90% for optimal
-              performance
+              • Capacity factor should stay between 80-95% for optimal grid
+              operation
             </li>
-            <li>• Events have varying impacts and durations</li>
+            <li>• Use flexibility services to balance demand and supply</li>
           </ul>
         </div>
       </main>

@@ -32,7 +32,11 @@ export function useGame(options: UseGameOptions = {}): UseGameReturn {
     activeTools: [],
     totalDemand: 0,
     totalSupply: 0,
-    networkPressure: 0,
+    capacityFactor: 0,
+    infrastructureTier: 'Small Village',
+    warningCount: 0,
+    ticksInRedZone: 0,
+    isGameOver: false,
   });
   const [tickInterval, setTickInterval] = useState<number>(500);
 

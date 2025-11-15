@@ -27,12 +27,34 @@ export interface GameState {
   activeTools: ActiveTool[];
   totalDemand: number;
   totalSupply: number;
-  networkPressure: number; // demand / supply ratio
+  capacityFactor: number; // demand / supply ratio (grid utilization)
+  infrastructureTier: string; // Current infrastructure tier name
+  warningCount: number;
+  ticksInRedZone: number;
+  isGameOver: boolean;
+  gameOverReason?: string;
 }
 
 export type GameEventCallback = (state: GameState) => void;
 
 export const BASE_DEMAND_PER_PERSON = 0.148; // kW per person
+
+// Capacity factor thresholds (demand/supply ratio)
+export const HEALTHY_CAPACITY_MIN = 0.8; // Below this is inefficient
+export const HEALTHY_CAPACITY_MAX = 0.95; // Above this is risky/overload
+export const TICKS_IN_RED_FOR_WARNING = 10; // Ticks in red zone before warning
+export const MAX_WARNINGS = 3; // Game over after this many warnings
+
+// Infrastructure tiers - supply upgrades at population milestones
+export const INFRASTRUCTURE_TIERS = [
+  { name: 'Small Village', population: 0, supply: 400 },           // Starting tier
+  { name: 'Small Town', population: 10000, supply: 2000 },         // 10k people
+  { name: 'Larger Town', population: 30000, supply: 6000 },        // 30k people
+  { name: 'Industrial Town', population: 75000, supply: 15000 },   // 75k people
+  { name: 'Small City', population: 150000, supply: 30000 },       // 150k people
+  { name: 'Large City', population: 300000, supply: 60000 },       // 300k people
+  { name: 'Metropolitan Area', population: 500000, supply: 100000 }, // 500k people
+];
 export class GameEngine {
   private state: GameState;
   private config: Required<GameEngineConfig>;
@@ -74,7 +96,7 @@ export class GameEngine {
     this.currentTickInterval = this.config.baseTickInterval;
 
     const initialDemand = this.config.initialPopulation * BASE_DEMAND_PER_PERSON;
-    const initialSupply = this.config.baseSupply;
+    const initialSupply = INFRASTRUCTURE_TIERS[0].supply; // Start with first tier
 
     this.state = {
       currentTime: this.config.initialTime,
@@ -87,7 +109,11 @@ export class GameEngine {
       activeTools: [],
       totalDemand: initialDemand,
       totalSupply: initialSupply,
-      networkPressure: initialDemand / initialSupply,
+      capacityFactor: initialDemand / initialSupply,
+      infrastructureTier: INFRASTRUCTURE_TIERS[0].name,
+      warningCount: 0,
+      ticksInRedZone: 0,
+      isGameOver: false,
     };
   }
 
@@ -121,7 +147,7 @@ export class GameEngine {
   reset(): void {
     this.stop();
     const initialDemand = this.config.initialPopulation * BASE_DEMAND_PER_PERSON;
-    const initialSupply = this.config.baseSupply;
+    const initialSupply = INFRASTRUCTURE_TIERS[0].supply; // Start with first tier
 
     this.state = {
       currentTime: this.config.initialTime,
@@ -134,7 +160,11 @@ export class GameEngine {
       activeTools: [],
       totalDemand: initialDemand,
       totalSupply: initialSupply,
-      networkPressure: initialDemand / initialSupply,
+      capacityFactor: initialDemand / initialSupply,
+      infrastructureTier: INFRASTRUCTURE_TIERS[0].name,
+      warningCount: 0,
+      ticksInRedZone: 0,
+      isGameOver: false,
     };
     this.currentTickInterval = this.config.baseTickInterval;
   }
@@ -193,6 +223,9 @@ export class GameEngine {
 
     // Calculate network demand and supply with event and tool multipliers
     this.calculateNetworkMetrics();
+
+    // Check network pressure and track warnings
+    this.checkNetworkPressure();
 
     // Update tick interval (gets slower over time exponentially, but capped)
     // This makes the game feel faster as time goes on
@@ -326,8 +359,10 @@ export class GameEngine {
 
     this.state.totalDemand = baseDemand * demandEventMultiplier * demandToolMultiplier;
 
-    // Base supply (grows slowly with population to keep pace somewhat)
-    const baseSupply = this.config.baseSupply + (this.state.currentPopulation - this.config.initialPopulation) * 2;
+    // Base supply from infrastructure tier (jumps at population milestones)
+    const currentTier = this.getInfrastructureTier(this.state.currentPopulation);
+    const baseSupply = currentTier.supply;
+    this.state.infrastructureTier = currentTier.name;
 
     // Apply supply event multipliers
     const supplyEventMultiplier = this.state.activeEvents
@@ -341,9 +376,60 @@ export class GameEngine {
 
     this.state.totalSupply = baseSupply * supplyEventMultiplier * supplyToolMultiplier;
 
-    // Calculate network pressure (demand/supply ratio)
-    // Ideal pressure is around 0.8-0.9 (80-90% utilization)
-    this.state.networkPressure = this.state.totalDemand / this.state.totalSupply;
+    // Calculate capacity factor (demand/supply ratio)
+    // Healthy range is 0.8-0.95 (80-95% utilization)
+    this.state.capacityFactor = this.state.totalDemand / this.state.totalSupply;
+  }
+
+  /**
+   * Get infrastructure tier based on current population
+   * Returns the tier object for the highest tier the population has reached
+   */
+  private getInfrastructureTier(population: number) {
+    // Find the highest tier we've reached (iterate backwards from highest to lowest)
+    for (let i = INFRASTRUCTURE_TIERS.length - 1; i >= 0; i--) {
+      if (population >= INFRASTRUCTURE_TIERS[i].population) {
+        return INFRASTRUCTURE_TIERS[i];
+      }
+    }
+    // Fallback to first tier (should never happen)
+    return INFRASTRUCTURE_TIERS[0];
+  }
+
+  /**
+   * Check capacity factor and issue warnings if in red zone
+   * Red zone is below HEALTHY_CAPACITY_MIN or above HEALTHY_CAPACITY_MAX
+   */
+  private checkNetworkPressure(): void {
+    if (this.state.isGameOver) return;
+
+    const isInRedZone =
+      this.state.capacityFactor < HEALTHY_CAPACITY_MIN ||
+      this.state.capacityFactor > HEALTHY_CAPACITY_MAX;
+
+    if (isInRedZone) {
+      this.state.ticksInRedZone++;
+
+      // Issue warning after being in red zone for 10 ticks
+      if (this.state.ticksInRedZone === TICKS_IN_RED_FOR_WARNING) {
+        this.state.warningCount++;
+        this.state.ticksInRedZone = 0; // Reset counter
+
+        // Check if game should end
+        if (this.state.warningCount >= MAX_WARNINGS) {
+          this.state.isGameOver = true;
+          this.state.isRunning = false;
+          this.state.gameOverReason =
+            this.state.capacityFactor > HEALTHY_CAPACITY_MAX
+              ? 'Grid overload! Demand exceeded safe operating capacity.'
+              : 'Grid underutilized! Excessive unused capacity is wasteful and costly.';
+          this.stop();
+        }
+      }
+    } else {
+      // Reset red zone counter if we're back in healthy range
+      this.state.ticksInRedZone = 0;
+    }
   }
 
   /**
