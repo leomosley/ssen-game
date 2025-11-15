@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent } from "../ui/dialog";
 
 export default function Notifications() {
-  const { gameState, reset } = useGameContext();
+  const { gameState, reset, start } = useGameContext();
 
   useEffect(() => {
     if (gameState.warningCount === 0) return;
@@ -36,10 +36,35 @@ export default function Notifications() {
               {Math.floor(gameState.currentPopulation).toLocaleString()}.
             </p>
             <button
-              onClick={reset}
+              onClick={() => {
+                reset();
+              }}
               className="mt-4 px-6 py-3 bg-white text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors cursor-pointer"
             >
               Try Again
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (!gameState.isRunning) {
+    return (
+      <Dialog open={!gameState.isRunning}>
+        <DialogContent className="bg-green-600 text-white rounded-lg p-6 border-4 border-green-800">
+          <div className="w-full ">
+            <h2 className="text-2xl font-bold mb-2">START GAME</h2>
+            <p className="text-lg">
+              Press the start button to start a new game.
+            </p>
+            <button
+              onClick={() => {
+                start();
+              }}
+              className="mt-4 px-6 py-3 bg-white text-green-600 rounded-lg font-semibold hover:bg-green-50 transition-colors cursor-pointer"
+            >
+              Start Game
             </button>
           </div>
         </DialogContent>
