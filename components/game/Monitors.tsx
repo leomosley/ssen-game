@@ -6,7 +6,7 @@ import { useGameContext } from "@/lib/context/game-context";
 export default function Monitors() {
   const { gameState } = useGameContext();
   return (
-    <Card className="w-full h-fit">
+    <Card className="w-full h-full">
       <CardHeader>
         <CardTitle className="font-semibold text-slate-900">
           Grid Capacity Factor
